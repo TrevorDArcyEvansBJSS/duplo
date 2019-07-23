@@ -3,6 +3,8 @@ C/C++/Java Duplicate Source Code Block Finder
 
 (http://duplo.sourceforge.net/)
 
+https://github.com/dlidstrom/Duplo
+
 
 ________________________________________________________________________________
 
