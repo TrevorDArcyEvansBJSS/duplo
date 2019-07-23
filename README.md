@@ -3,9 +3,9 @@ C/C++/Java Duplicate Source Code Block Finder
 
 (http://duplo.sourceforge.net/)
 
+A more up to date version is at:
+
 https://github.com/dlidstrom/Duplo
-
-
 ________________________________________________________________________________
 
 Duplo (C/C++/Java Duplicate Source Code Block Finder)
@@ -13,19 +13,23 @@ Duplo (C/C++/Java Duplicate Source Code Block Finder)
 Version 0.1.3 Readme File, May 2005
 ________________________________________________________________________________
 
-## CONTENTS
- 1. GENERAL INFORMATION
- 2. SYSTEM REQUIREMENTS
- 3. LICENSE
+## Contents
+1. General Information
+2. System Requirements
+3. Download
+4. Performance Measurements
+5. Background
+6. License
 ________________________________________________________________________________
 
-### 1 GENERAL INFORMATION
+### 1 General Information
 
 Duplicated source code blocks can harm maintainability of software systems.
 Duplo is a tool to find duplicated code blocks within multiple C/C++/Java 
 source files.
 
-- Sample Output ----------------------------------------------------------------
+#### 1.1 Sample Output
+----------------------------------------------------------------
 
 ```
 src\engine\geometry\simple\TorusGeometry.cpp(56)
@@ -43,11 +47,29 @@ src\engine\geometry\SkinnedMeshGeometry.cpp(45)
 ```
 --------------------------------------------------------------------------------
 
-#### 1.1 OPTIONS
+#### 1.2 Usage
 
-Run `duplo --help` on the command line to see detailed options.
+```
+NAME
+        Duplo - duplicate source code block finder
 
-#### 1.2 FEEDBACK AND BUG REPORTING
+
+SYNOPSIS
+        duplo [OPTIONS] [INTPUT_FILELIST_FILE] [OUTPUT_FILE]
+
+DESCRIPTION
+        Duplo is a tool to find duplicated code blocks in large
+        C/C++/Java software systems.
+
+        -ml minimal block size in lines (default is 4)
+        -mc minimal characters in line (default is 3)
+            lines with less characters are ignored
+        -ip ignore preprocessor directives
+        INTPUT_FILELIST_FILE file with list of source files
+        OUTPUT_FILE output file
+```
+
+#### 1.3 Feedback and Bug Reporting
 
 Please send Feedback and Bug Reports to:
 
@@ -55,7 +77,7 @@ cammann@giants.ch
 
 duplo@bjss.com
 
-#### 1.3 FILE LIST GENERATION
+#### 1.4 Source files text file generation
 
 Generate a list of all files of a directory with:
 
@@ -72,13 +94,32 @@ UNIX
 ```
 ________________________________________________________________________________
 
-### 2 SYSTEM REQUIREMENTS
+### 2 System Requirements
 
 Duplo needs about two times the memory of the total source code size. So if
 your Source code is about 120MB it requires 240MB.
 ________________________________________________________________________________
+### 3 Download
 
-### 3 LICENSE
+Download Duplo [here.](https://github.com/TrevorDArcyEvansBJSS/duplo/releases)
+________________________________________________________________________________
+### 4 Performance Measurements
+
+|System                   |Files  |Locs     |Time   |Hardware   |
+|-------------------------|------:|--------:|------:|-----------|
+|3D Game Engine           |275    |12211    |4sec   |3.4GHZ P4  |
+|Quake2                   |266    |102740   |58sec  |3.4GHZ P4  |
+|Computer Game            |5639   |754320   |34min  |3.4GHZ P4  |
+|Linux Kernel 2.6.11.10   |17034  |4184356  |16h    |3.4GHZ P4  |
+
+________________________________________________________________________________
+### 5 Background
+
+Duplo uses the techniques described in the paper 
+[A Language Independent Approach for Detecting Duplicated Code](http://www.iam.unibe.ch/~scg/Archive/Papers/Duca99bCodeDuplication.pdf)
+from Stéphane Ducasse, Matthias Rieger and Serge Demeyer to detect duplicated code blocks.
+________________________________________________________________________________
+### 6 LICENSE
 
 Duplo is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -94,4 +135,4 @@ You should have received a copy of the GNU General Public License
 along with Foobar; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ________________________________________________________________________________
-                                   2005, Christian M. Ammann (cammann@giants.ch)                                                            
+                                   2005, Christian M. Ammann (cammann@giants.ch)
