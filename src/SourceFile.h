@@ -8,12 +8,12 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
@@ -26,26 +26,35 @@
 #include <vector>
 
 #include "SourceLine.h"
+#include "FileType.h"
 
-class SourceFile {
+#ifndef MIN
+#define MIN(x,y) ((x)<(y)?(x):(y))
+#endif
+#ifndef MAX
+#define MAX(x,y) ((x)>(y)?(x):(y))
+#endif
+
+class SourceFile
+{
 protected:
-    std::string m_fileName;
+  std::string m_fileName;
+  FileType::FILETYPE m_FileType;
 
-    int m_minChars;
-    bool m_ignorePrepStuff;
+  unsigned int m_minChars;
+  bool m_ignorePrepStuff;
 
-    std::vector<SourceLine*> m_sourceLines;
+  std::vector<SourceLine*> m_sourceLines;
 
-	bool isSourceLine(std::string& line);
-	void getCleanLine(std::string& line, std::string& cleanedLine);
+  bool isSourceLine(const std::string& line);
+  void getCleanLine(const std::string& line, std::string& cleanedLine);
 
 public:
-    SourceFile(std::string fileName, int minChars, bool ignorePrepStuff);
-    
-    int getNumOfLines();
-    SourceLine* getLine(int index);
-    std::string& getFilename();
-    
+  SourceFile(const std::string& fileName, const unsigned int minChars, const bool ignorePrepStuff);
+
+  int getNumOfLines();
+  SourceLine* getLine(const int index);
+  const std::string& getFilename();
 };
 
 #endif

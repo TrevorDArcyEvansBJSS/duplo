@@ -25,15 +25,16 @@
 #include <string>
 #include <vector>
 
-class TextFile {
+class TextFile 
+{
 protected:
     std::string m_fileName;
 
 public:
-    TextFile(std::string fileName);
+    TextFile(const std::string& fileName);
     bool readAll(std::string& all);
     bool readLines(std::vector<std::string>& lines, bool doTrim);
-    bool writeAll(std::string& all);
+    bool writeAll(const std::string& all);
 };
 
 #endif
