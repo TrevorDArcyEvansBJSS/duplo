@@ -3,12 +3,12 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
@@ -16,91 +16,174 @@
 
 #include "SourceFile.h"
 
-#include <sstream>
-#include <iostream>
-
 #include "TextFile.h"
 #include "StringUtil.h"
 
-#ifndef MIN
-#define MIN(x,y) ((x)<(y)?(x):(y))
-#endif
-#ifndef MAX
-#define MAX(x,y) ((x)>(y)?(x):(y))
-#endif
+#include <algorithm>
+#include <assert.h>
 
+SourceFile::SourceFile(const std::string& fileName, const unsigned int minChars, const bool ignorePrepStuff) :
+  m_fileName(fileName),
+  m_minChars(minChars),
+  m_ignorePrepStuff(ignorePrepStuff),
+  m_FileType(FileType::GetFileType(fileName))
+{
+  TextFile listOfFiles(m_fileName.c_str());
 
-SourceFile::SourceFile(std::string fileName, int minChars, bool ignorePrepStuff){
-    m_fileName = fileName;
- 	m_minChars = minChars;
-    m_ignorePrepStuff = ignorePrepStuff;
+  std::vector<std::string> lines;
+  listOfFiles.readLines(lines, false);
 
- 	TextFile listOfFiles(m_fileName.c_str());
+  int openBlockComments = 0;
+  for (int i = 0; i < (int)lines.size(); i++)
+  {
+    std::string& line = lines[i];
+    std::string tmp;
 
-    std::vector<std::string> lines;
-    listOfFiles.readLines(lines, false);
-	
-    int openBlockComments = 0;
-	for(int i=0;i<(int)lines.size();i++){
-        
-        std::string tmp;
-        std::string& line = lines[i];
+    tmp.reserve(line.size());
 
-        int lineSize = (int)line.size();
-        for(int j=0;j<(int)line.size();j++){
-            if(line[j] == '/' && line[MIN(lineSize-1, j+1)] == '*'){
-                openBlockComments++;
-            }
-
-            if(openBlockComments <= 0){
-                tmp.push_back(line[j]);
-            }
-
-            if(line[MAX(0, j-1)] == '*' && line[j] == '/'){
-                openBlockComments--;
-            }
+    // Remove block comments
+    if (FileType::FILETYPE_C == m_FileType ||
+      FileType::FILETYPE_CPP == m_FileType ||
+      FileType::FILETYPE_CXX == m_FileType ||
+      FileType::FILETYPE_H == m_FileType ||
+      FileType::FILETYPE_HPP == m_FileType ||
+      FileType::FILETYPE_JAVA == m_FileType ||
+      FileType::FILETYPE_CS == m_FileType) {
+      int lineSize = (int)line.size();
+      for (int j = 0; j < (int)line.size(); j++) {
+        if (line[j] == '/' && line[MIN(lineSize - 1, j + 1)] == '*')
+        {
+          openBlockComments++;
         }
 
-		std::string cleaned;
-		getCleanLine(tmp, cleaned);
-		
-		if(isSourceLine(cleaned)){
-			m_sourceLines.push_back(new SourceLine(cleaned, i));
-		}
-	}
-}
-
-void SourceFile::getCleanLine(std::string& line, std::string& cleanedLine){
-
-    // Remove single line comments
-	int lineSize = (int)line.size();
-    for(int i=0;i<(int)line.size();i++){
-		if(i < lineSize-2 && line[i] == '/' && line[i+1] == '/'){
-            break;
+        if (openBlockComments <= 0)
+        {
+          tmp.push_back(line[j]);
         }
-        
-		cleanedLine.push_back(line[i]);
-	}
-}
 
-bool SourceFile::isSourceLine(std::string& line){
-	std::string tmp = StringUtil::trim(line);
-
-    if(m_ignorePrepStuff && tmp[0] == '#'){
-        return false;
+        if (line[MAX(0, j - 1)] == '*' && line[j] == '/')
+        {
+          openBlockComments--;
+        }
+      }
+    }
+    if (FileType::FILETYPE_VB == m_FileType)
+    {
+      tmp = line;
     }
 
-    return ((int)tmp.size() >= m_minChars);
+    std::string cleaned;
+    getCleanLine(tmp, cleaned);
+
+    if (isSourceLine(cleaned))
+    {
+      m_sourceLines.push_back(new SourceLine(cleaned, i));
+    }
+  }
 }
 
-int SourceFile::getNumOfLines(){
-	return (int)m_sourceLines.size();
+void SourceFile::getCleanLine(const std::string& line, std::string& cleanedLine)
+{
+  // Remove single line comments
+  cleanedLine.reserve(line.size());
+  int lineSize = (int)line.size();
+  for (int i = 0; i < (int)line.size(); i++)
+  {
+    switch (m_FileType)
+    {
+    case FileType::FILETYPE_C:
+    case FileType::FILETYPE_CPP:
+    case FileType::FILETYPE_CXX:
+    case FileType::FILETYPE_H:
+    case FileType::FILETYPE_HPP:
+    case FileType::FILETYPE_JAVA:
+    case FileType::FILETYPE_CS:
+      if (i < lineSize - 2 && line[i] == '/' && line[i + 1] == '/')
+      {
+        return;
+      }
+      break;
+
+    case FileType::FILETYPE_VB:
+      if (i < lineSize - 1 && line[i] == '\'')
+      {
+        return;
+      }
+      break;
+    }
+    cleanedLine.push_back(line[i]);
+  }
 }
 
-SourceLine* SourceFile::getLine(int index){
-	return m_sourceLines[index];
+bool SourceFile::isSourceLine(const std::string& line)
+{
+  std::string tmp = StringUtil::trim(line);
+
+  // filter min size lines
+  if (tmp.size() < m_minChars)
+  {
+    return false;
+  }
+
+  std::transform(tmp.begin(), tmp.end(), tmp.begin(), (int(*)(int)) tolower);
+
+  if (m_ignorePrepStuff)
+  {
+    switch (m_FileType)
+    {
+    case FileType::FILETYPE_C:
+    case FileType::FILETYPE_CPP:
+    case FileType::FILETYPE_CXX:
+    case FileType::FILETYPE_H:
+    case FileType::FILETYPE_HPP:
+    case FileType::FILETYPE_JAVA:
+      if (tmp[0] == '#')
+      {
+        return false;
+      }
+      break;
+
+    case FileType::FILETYPE_CS:
+    {
+      if (tmp[0] == '#')
+      {
+        return false;
+      }
+      // look for preprocessor marker in start of string
+      const std::string PreProc_CS = "using";
+
+      return std::string::npos == tmp.find(PreProc_CS.c_str(), 0, PreProc_CS.length());
+    }
+    break;
+
+    case FileType::FILETYPE_VB:
+    {
+      // look for preprocessor marker in start of string
+      const std::string PreProc_VB = "imports";
+
+      return std::string::npos == tmp.find(PreProc_VB.c_str(), 0, PreProc_VB.length());
+    }
+    break;
+    }
+  }
+
+  bool bRet = ((int)tmp.size() >= m_minChars);
+  assert(bRet);
+
+  return bRet;
 }
 
-std::string& SourceFile::getFilename(){
-	return m_fileName;
+int SourceFile::getNumOfLines()
+{
+  return (int)m_sourceLines.size();
+}
+
+SourceLine* SourceFile::getLine(const int index)
+{
+  return m_sourceLines[index];
+}
+
+const std::string& SourceFile::getFilename()
+{
+  return m_fileName;
 }

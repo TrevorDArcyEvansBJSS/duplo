@@ -28,6 +28,9 @@
     <ClCompile Include="TextFile.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="FileType.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ArgumentParser.h">
@@ -51,5 +54,6 @@
     <ClInclude Include="TextFile.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="FileType.h" />
   </ItemGroup>
 </Project>

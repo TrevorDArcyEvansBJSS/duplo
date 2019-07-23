@@ -51,7 +51,7 @@ src\engine\geometry\SkinnedMeshGeometry.cpp(45)
 
 ```
 NAME
-        Duplo - duplicate source code block finder
+        Duplo 0.2.0 - duplicate source code block finder
 
 
 SYNOPSIS
@@ -59,14 +59,23 @@ SYNOPSIS
 
 DESCRIPTION
         Duplo is a tool to find duplicated code blocks in large
-        C/C++/Java software systems.
+        C/C++/Java/C#/VB.Net software systems.
 
         -ml minimal block size in lines (default is 4)
         -mc minimal characters in line (default is 3)
             lines with less characters are ignored
         -ip ignore preprocessor directives
+        -d  ignore file pairs with same name
+       -xml output file in XML
         INTPUT_FILELIST_FILE file with list of source files
         OUTPUT_FILE output file
+
+VERSION
+       0.2.0
+
+AUTHORS
+       Christian M. Ammann (cammann@giants.ch)
+       Trevor D'Arcy-Evans (tdarcyevans@hotmail.com)
 ```
 
 #### 1.3 Feedback and Bug Reporting
