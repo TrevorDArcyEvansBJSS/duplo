@@ -51,7 +51,7 @@ src\engine\geometry\SkinnedMeshGeometry.cpp(45)
 
 ```
 NAME
-        Duplo 0.2.0 - duplicate source code block finder
+        Duplo 0.3.0 - duplicate source code block finder
 
 
 SYNOPSIS
@@ -66,12 +66,12 @@ DESCRIPTION
             lines with less characters are ignored
         -ip ignore preprocessor directives
         -d  ignore file pairs with same name
-       -xml output file in XML
+        -xml output file in XML
         INTPUT_FILELIST_FILE file with list of source files
         OUTPUT_FILE output file
 
 VERSION
-       0.2.0
+       0.3.0
 
 AUTHORS
        Christian M. Ammann (cammann@giants.ch)
@@ -92,7 +92,8 @@ Generate a list of all files of a directory with:
 
 Windows
 ```
-dir /s /b /a-d *.cpp *.h > myFiles.lst`
+dir /s /b /a-d *.cpp *.h > myFiles.lst
+dir /s /b /a-d *.cs > myFiles.lst
 ```
 
 UNIX

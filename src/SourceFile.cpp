@@ -24,9 +24,9 @@
 
 SourceFile::SourceFile(const std::string& fileName, const unsigned int minChars, const bool ignorePrepStuff) :
   m_fileName(fileName),
+  m_FileType(FileType::GetFileType(fileName)),
   m_minChars(minChars),
-  m_ignorePrepStuff(ignorePrepStuff),
-  m_FileType(FileType::GetFileType(fileName))
+  m_ignorePrepStuff(ignorePrepStuff)
 {
   TextFile listOfFiles(m_fileName.c_str());
 
@@ -41,16 +41,20 @@ SourceFile::SourceFile(const std::string& fileName, const unsigned int minChars,
 
     tmp.reserve(line.size());
 
-    // Remove block comments
-    if (FileType::FILETYPE_C == m_FileType ||
-      FileType::FILETYPE_CPP == m_FileType ||
-      FileType::FILETYPE_CXX == m_FileType ||
-      FileType::FILETYPE_H == m_FileType ||
-      FileType::FILETYPE_HPP == m_FileType ||
-      FileType::FILETYPE_JAVA == m_FileType ||
-      FileType::FILETYPE_CS == m_FileType) {
+    switch (m_FileType)
+    {
+      // Remove block comments
+    case FileType::FILETYPE_C:
+    case FileType::FILETYPE_CPP:
+    case FileType::FILETYPE_CXX:
+    case FileType::FILETYPE_H:
+    case FileType::FILETYPE_HPP:
+    case FileType::FILETYPE_JAVA:
+    case FileType::FILETYPE_CS:
+    {
       int lineSize = (int)line.size();
-      for (int j = 0; j < (int)line.size(); j++) {
+      for (int j = 0; j < (int)line.size(); j++)
+      {
         if (line[j] == '/' && line[MIN(lineSize - 1, j + 1)] == '*')
         {
           openBlockComments++;
@@ -66,10 +70,22 @@ SourceFile::SourceFile(const std::string& fileName, const unsigned int minChars,
           openBlockComments--;
         }
       }
+
+      break;
     }
-    if (FileType::FILETYPE_VB == m_FileType)
+
+    case FileType::FILETYPE_VB:
+    case FileType::FILETYPE_UNKNOWN:
     {
       tmp = line;
+      break;
+    }
+
+    case FileType::FILETYPE_S:
+    {
+      tmp.assign(line, 0, line.find(";"));
+      break;
+    }
     }
 
     std::string cleaned;
@@ -110,7 +126,19 @@ void SourceFile::getCleanLine(const std::string& line, std::string& cleanedLine)
         return;
       }
       break;
+
+    case FileType::FILETYPE_S:
+      if (i < lineSize - 1 && line[i] == ';')
+      {
+        return;
+      }
+      break;
+
+      // no pre-processing of code of unknown languages
+    case FileType::FILETYPE_UNKNOWN:
+      break;
     }
+
     cleanedLine.push_back(line[i]);
   }
 }
@@ -149,10 +177,19 @@ bool SourceFile::isSourceLine(const std::string& line)
       {
         return false;
       }
-      // look for preprocessor marker in start of string
-      const std::string PreProc_CS = "using";
+      // look for attribute
+      if (tmp[0] == '[')
+      {
+        return false;
+      }
+      // look for other markers to avoid
+      const std::string PreProc_CS[] = { "namespace", "using", "private", "protected", "public" };
 
-      return std::string::npos == tmp.find(PreProc_CS.c_str(), 0, PreProc_CS.length());
+      for (int i = 0; i < 4; i++)
+      {
+        if (tmp.find(PreProc_CS[i].c_str(), 0, PreProc_CS[i].length()) != std::string::npos)
+          return false;
+      }
     }
     break;
 
@@ -164,13 +201,25 @@ bool SourceFile::isSourceLine(const std::string& line)
       return std::string::npos == tmp.find(PreProc_VB.c_str(), 0, PreProc_VB.length());
     }
     break;
+
+    case FileType::FILETYPE_S:
+    {
+      const std::string PreProc_S = "ret"; //we can't deduplicate ret AFAIK
+      return std::string::npos == tmp.find(PreProc_S.c_str(), 0, PreProc_S.length());
+    }
+    break;
+
+    // no pre-processing of code of unknown languages
+    case FileType::FILETYPE_UNKNOWN:
+      break;
     }
   }
 
   bool bRet = ((int)tmp.size() >= m_minChars);
   assert(bRet);
 
-  return bRet;
+  // must be at least one alpha-numeric character
+  return bRet && std::find_if(tmp.begin(), tmp.end(), isalpha) != tmp.end();
 }
 
 int SourceFile::getNumOfLines()
@@ -183,7 +232,17 @@ SourceLine* SourceFile::getLine(const int index)
   return m_sourceLines[index];
 }
 
-const std::string& SourceFile::getFilename()
+const std::string& SourceFile::getFilename() const
 {
   return m_fileName;
+}
+
+bool SourceFile::operator==(const SourceFile& other) const
+{
+  return (this == &other) || (getFilename() == other.getFilename());
+}
+
+bool SourceFile::operator!=(const SourceFile& other) const
+{
+  return !(*this == other);
 }

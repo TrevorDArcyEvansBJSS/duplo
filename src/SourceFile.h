@@ -35,7 +35,7 @@
 #define MAX(x,y) ((x)>(y)?(x):(y))
 #endif
 
-class SourceFile
+class SourceFile 
 {
 protected:
   std::string m_fileName;
@@ -54,7 +54,10 @@ public:
 
   int getNumOfLines();
   SourceLine* getLine(const int index);
-  const std::string& getFilename();
+  const std::string& getFilename() const;
+
+  bool operator==(const SourceFile& other) const;
+  bool operator!=(const SourceFile& other) const;
 };
 
 #endif

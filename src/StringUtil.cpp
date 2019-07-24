@@ -134,7 +134,6 @@ int StringUtil::split(const std::string& input, const std::string& delimiter, st
     {
       results.push_back(s);
     }
-
   }
 
   return numFound;

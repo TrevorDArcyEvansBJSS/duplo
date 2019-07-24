@@ -58,3 +58,4 @@ std::string& SourceLine::getLine()
 {
   return m_line;
 }
+
