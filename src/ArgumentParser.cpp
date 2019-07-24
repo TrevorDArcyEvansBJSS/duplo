@@ -19,13 +19,13 @@
 #include <cstdlib>
 #include <cstring>
 
-ArgumentParser::ArgumentParser(int m_argc, char* m_argv[])
+ArgumentParser::ArgumentParser(int m_argc, const char* m_argv[])
 {
   argc = m_argc;
   argv = m_argv;
 }
 
-bool ArgumentParser::is(char* s)
+bool ArgumentParser::is(const char* s)
 {
   for (int i = 0; i < argc; i++)
   {
@@ -37,7 +37,7 @@ bool ArgumentParser::is(char* s)
   return false;
 }
 
-char* ArgumentParser::getStr(char* s, char* defaultValue)
+const char* ArgumentParser::getStr(const char* s, const char* defaultValue)
 {
   for (int i = 0; i < argc; i++)
   {
@@ -49,7 +49,7 @@ char* ArgumentParser::getStr(char* s, char* defaultValue)
   return defaultValue;
 }
 
-int ArgumentParser::getInt(char* s, int defaultValue)
+int ArgumentParser::getInt(const char* s, int defaultValue)
 {
   for (int i = 0; i < argc; i++)
   {
@@ -62,7 +62,7 @@ int ArgumentParser::getInt(char* s, int defaultValue)
   return defaultValue;
 }
 
-float ArgumentParser::getFloat(char* s, float defaultValue)
+float ArgumentParser::getFloat(const char* s, float defaultValue)
 {
   for (int i = 0; i < argc; i++)
   {

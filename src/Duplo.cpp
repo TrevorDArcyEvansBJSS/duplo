@@ -19,6 +19,9 @@
 #include <fstream>
 #include <time.h>
 
+#include <algorithm>
+#include <cstring>
+
 #include "SourceFile.h"
 #include "SourceLine.h"
 
@@ -27,15 +30,21 @@
 #include "TextFile.h"
 #include "ArgumentParser.h"
 
-Duplo::Duplo(const std::string& listFileName, unsigned int minBlockSize, unsigned int minChars, bool ignorePrepStuff, bool ignoreSameFilename, bool Xml) :
+Duplo::Duplo(
+  const std::string& listFileName,
+  unsigned int minBlockSize,
+  unsigned int blockPercentThreshold,
+  unsigned int minChars,
+  bool ignorePrepStuff, bool ignoreSameFilename, bool Xml) :
   m_listFileName(listFileName),
   m_minBlockSize(minBlockSize),
+  m_blockPercentThreshold(blockPercentThreshold),
   m_minChars(minChars),
   m_ignorePrepStuff(ignorePrepStuff),
   m_ignoreSameFilename(ignoreSameFilename),
-  m_Xml(Xml),
   m_maxLinesPerFile(0),
   m_DuplicateLines(0),
+  m_Xml(Xml),
   m_pMatrix(NULL)
 {
 }
@@ -92,8 +101,8 @@ void Duplo::reportSeq(int line1, int line2, int count, SourceFile* pSource1, Sou
 
 int Duplo::process(SourceFile* pSource1, SourceFile* pSource2, std::ostream& outFile)
 {
-  const int m = pSource1->getNumOfLines();
-  const int n = pSource2->getNumOfLines();
+  const unsigned int m = pSource1->getNumOfLines();
+  const unsigned int n = pSource2->getNumOfLines();
 
   const unsigned char NONE = 0;
   const unsigned char MATCH = 1;
@@ -102,10 +111,10 @@ int Duplo::process(SourceFile* pSource1, SourceFile* pSource2, std::ostream& out
   memset(m_pMatrix, NONE, m * n);
 
   // Compute matrix
-  for (int y = 0; y < m; y++)
+  for (unsigned int y = 0; y < m; y++)
   {
     SourceLine* pSLine = pSource1->getLine(y);
-    for (int x = 0; x < n; x++)
+    for (unsigned int x = 0; x < n; x++)
     {
       if (pSLine->equals(pSource2->getLine(x)))
       {
@@ -114,10 +123,18 @@ int Duplo::process(SourceFile* pSource1, SourceFile* pSource2, std::ostream& out
     }
   }
 
+  // support reporting filtering by both:
+  // - "lines of code duplicated", &
+  // - "percentage of file duplicated"
+  const unsigned int lMinBlockSize = std::max(
+    m_minBlockSize, std::min(
+      m_minBlockSize,
+      (std::max(n, m) * 100) / m_blockPercentThreshold));
+
   int blocks = 0;
 
   // Scan vertical part
-  for (int y = 0; y < m; y++)
+  for (unsigned int y = 0; y < m; y++)
   {
     unsigned int seqLen = 0;
     int maxX = MIN(n, m - y);
@@ -129,55 +146,68 @@ int Duplo::process(SourceFile* pSource1, SourceFile* pSource2, std::ostream& out
       }
       else
       {
-        if (seqLen >= m_minBlockSize)
+        if (seqLen >= lMinBlockSize)
         {
-          reportSeq(y + x - seqLen, x - seqLen, seqLen, pSource1, pSource2, outFile);
-          blocks++;
+          int line1 = y + x - seqLen;
+          int line2 = x - seqLen;
+          if (!((line1 == line2) && (pSource1 == pSource2)))
+          {
+            reportSeq(line1, line2, seqLen, pSource1, pSource2, outFile);
+            blocks++;
+          }
         }
         seqLen = 0;
       }
     }
 
-    if (seqLen >= m_minBlockSize)
+    if (seqLen >= lMinBlockSize)
     {
-      reportSeq(m - seqLen, n - seqLen, seqLen, pSource1, pSource2, outFile);
-      blocks++;
+      int line1 = m - seqLen;
+      int line2 = n - seqLen;
+      if (!((line1 == line2) && (pSource1 == pSource2)))
+      {
+        reportSeq(line1, line2, seqLen, pSource1, pSource2, outFile);
+        blocks++;
+      }
     }
   }
 
-  // Scan horizontal part
-  for (int x = 1; x < n; x++)
+  if (pSource1 != pSource2)
   {
-    unsigned int seqLen = 0;
-    int maxY = MIN(m, n - x);
-    for (int y = 0; y < maxY; y++)
+    // Scan horizontal part
+    for (unsigned int x = 1; x < n; x++)
     {
-      if (m_pMatrix[x + y + n * y] == MATCH)
+      unsigned int seqLen = 0;
+      int maxY = MIN(m, n - x);
+      for (int y = 0; y < maxY; y++)
       {
-        seqLen++;
-      }
-      else
-      {
-        if (seqLen >= m_minBlockSize)
+        if (m_pMatrix[x + y + n * y] == MATCH)
         {
-          reportSeq(y - seqLen, x + y - seqLen, seqLen, pSource1, pSource2, outFile);
-          blocks++;
+          seqLen++;
         }
-        seqLen = 0;
+        else
+        {
+          if (seqLen >= lMinBlockSize)
+          {
+            reportSeq(y - seqLen, x + y - seqLen, seqLen, pSource1, pSource2, outFile);
+            blocks++;
+          }
+          seqLen = 0;
+        }
       }
-    }
 
-    if (seqLen >= m_minBlockSize)
-    {
-      reportSeq(m - seqLen, n - seqLen, seqLen, pSource1, pSource2, outFile);
-      blocks++;
+      if (seqLen >= lMinBlockSize)
+      {
+        reportSeq(m - seqLen, n - seqLen, seqLen, pSource1, pSource2, outFile);
+        blocks++;
+      }
     }
   }
 
   return blocks;
 }
 
-const std::string Duplo::getFilenamePart(const std::string& fullpath)
+const std::string Duplo::getFilenamePart(const std::string& fullpath) const
 {
   std::string path = StringUtil::substitute('\\', '/', fullpath);
 
@@ -192,9 +222,9 @@ const std::string Duplo::getFilenamePart(const std::string& fullpath)
   return filename;
 }
 
-bool Duplo::isSameFilename(const std::string& filename1, const std::string& filename2)
+bool Duplo::isSameFilename(const std::string& filename1, const std::string& filename2) const
 {
-  return (getFilenamePart(filename1) == getFilenamePart(filename2) && m_ignoreSameFilename);
+  return (getFilenamePart(filename1) == getFilenamePart(filename2));
 }
 
 void Duplo::run(std::string outputFileName)
@@ -233,7 +263,7 @@ void Duplo::run(std::string outputFileName)
   listOfFiles.readLines(lines, true);
 
   int files = 0;
-  int locsTotal = 0;
+  unsigned long locsTotal = 0;
 
   // Create vector with all source files
   for (int i = 0; i < (int)lines.size(); i++)
@@ -269,9 +299,10 @@ void Duplo::run(std::string outputFileName)
     std::cout << sourceFiles[i]->getFilename();
     int blocks = 0;
 
-    for (int j = 0; j < (int)sourceFiles.size(); j++)
+    blocks += process(sourceFiles[i], sourceFiles[i], outfile);
+    for (int j = i + 1; j < (int)sourceFiles.size(); j++)
     {
-      if (i > j && !isSameFilename(sourceFiles[i]->getFilename(), sourceFiles[j]->getFilename()))
+      if ((m_ignoreSameFilename && isSameFilename(sourceFiles[i]->getFilename(), sourceFiles[j]->getFilename())) == false)
       {
         blocks += process(sourceFiles[i], sourceFiles[j], outfile);
       }
@@ -279,11 +310,11 @@ void Duplo::run(std::string outputFileName)
 
     if (blocks > 0)
     {
-      std::cout << " found " << blocks << " block(s)" << std::endl;
+      std::cout << " found: " << blocks << " block(s)" << std::endl;
     }
     else
     {
-      std::cout << " nothing found" << std::endl;
+      std::cout << " nothing found." << std::endl;
     }
 
     blocksTotal += blocks;
@@ -322,13 +353,18 @@ void Duplo::run(std::string outputFileName)
   }
 }
 
+int Clamp(int upper, int lower, int value)
+{
+  return std::max(lower, std::min(upper, value));
+}
+
 /**
  * Main routine
  *
  * @param argc  number of arguments
  * @param argv  arguments
  */
-int main(int argc, char* argv[])
+int main(int argc, const char* argv[])
 {
   ArgumentParser ap(argc, argv);
 
@@ -337,7 +373,13 @@ int main(int argc, char* argv[])
 
   if (!ap.is("--help") && argc > 2)
   {
-    Duplo duplo(argv[argc - 2], ap.getInt("-ml", MIN_BLOCK_SIZE), ap.getInt("-mc", MIN_CHARS), ap.is("-ip"), ap.is("-d"), ap.is("-xml"));
+    Duplo duplo(
+      argv[argc - 2],
+      ap.getInt("-ml", MIN_BLOCK_SIZE),
+      Clamp(100, 0, ap.getInt("-pt", 100)),
+      ap.getInt("-mc", MIN_CHARS),
+      ap.is("-ip"), ap.is("-d"), ap.is("-xml")
+    );
     duplo.run(argv[argc - 1]);
   }
   else
@@ -353,6 +395,9 @@ int main(int argc, char* argv[])
     std::cout << "       C/C++/Java/C#/VB.Net software systems.\n\n";
 
     std::cout << "       -ml              minimal block size in lines (default is " << MIN_BLOCK_SIZE << ")\n";
+    std::cout << "       -pt              percentage of lines of duplication threshold to override -ml\n";
+    std::cout << "                        (default is 100%)\n";
+    std::cout << "                        useful for identifying whole file class duplication\n";
     std::cout << "       -mc              minimal characters in line (default is " << MIN_CHARS << ")\n";
     std::cout << "                        lines with less characters are ignored\n";
     std::cout << "       -ip              ignore preprocessor directives\n";
